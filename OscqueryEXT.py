@@ -66,9 +66,9 @@ class Oscquery:
 
 			for i, p in enumerate(parameter.tuplet):
 				p.val = color[i]
-			
+
 			stored["lastReceivedValue"] = color
-			
+
 		elif parStyle == "Pulse":
 			parameter.pulse()
 
@@ -94,7 +94,7 @@ class Oscquery:
 			result = self.getFullJson(pars)
 			jsonText = TDJ.jsonToText(result)
 			return jsonText
-		
+
 		else:
 			result = self.getFullJson(pars)
 			uriSegments = uri.split("/")
@@ -118,47 +118,53 @@ class Oscquery:
 
 		if hostinfoRequested:
 			return self.getHostinfoJson()
-		
+
 		self.clearStorage() # clear storage, to rebuild on each request
 		self.destroyBidirectional()
 
 		bidirectionalActivated = parent().par.Bidirectionalcommunication
-		
+
 		result = {
-			"DESCRIPTION": str(self.ownerComp.par.Name), 
+			"DESCRIPTION": str(self.ownerComp.par.Name),
+			"FULL_PATH": "/",
 			"CONTENTS": { }
 		}
 
 		for i in range(1,11):
 			compPath = getattr(self.ownerComp.par, "Comp" + str(i))
-			
+
 			container = self.ownerComp.op(compPath)
 
 			if container:
 				oscPrefix = self.getPrefix(container, i)
 				includePagesInPath = getattr(self.ownerComp.par, "Includepagesinoscpath" + str(i))
-				# print(compPath, oscPrefix, includePagesInPath)
+				pagesFilter = str(getattr(self.ownerComp.par, "Pages" + str(i)))
+				print(pagesFilter)
+				print(compPath, oscPrefix, includePagesInPath)
 
 				pages = container.customPages
 				compResult = {}
 				contents = {}
 
 				for page in pages:
+					print(page.name in pagesFilter)
+					if (not pagesFilter == "") and (page.name not in pagesFilter):
+						continue
 					if (page.isCustom):
 						parameters = page.pars
 						pageName = page.name
-						
+
 						for parameter in parameters:
 							par = self.getParameterDefinition(parameter, oscPrefix, includePagesInPath, pageName)
 							if par:
 								parameterName = par["DESCRIPTION"]
 								contents[parameterName] = par
-							
+
 						if (includePagesInPath):
 							compResult[pageName] = {}
 							compResult[pageName]["CONTENTS"] = contents
 							contents = {}
-				
+
 
 				if (includePagesInPath):
 					result["CONTENTS"][oscPrefix] = {}
@@ -172,13 +178,13 @@ class Oscquery:
 
 		return result
 
-	
+
 	def getParameterDefinition(self, parameter, oscPrefix, includePagesInPath, pageName):
 		isSingleParameter = (parameter.name == parameter.tupletName)
 
 		if (isSingleParameter or (not isSingleParameter and parameter.vecIndex == 0) ):
 			parameterName = parameter.tupletName
-			
+
 			if (includePagesInPath):
 				oscAddress = "/" + oscPrefix + "/" + pageName + "/" + parameterName
 			else:
@@ -198,7 +204,7 @@ class Oscquery:
 
 			par["ACCESS"] = self.getAccess(parameter)
 
-			storageItem = { 
+			storageItem = {
 				"address": oscAddress,
 				"type": par["TYPE"],
 				"par": parameter
@@ -241,12 +247,12 @@ class Oscquery:
 
 		return {
 			"address": address,
-			"rawMsg": raw 
+			"rawMsg": raw
 		}
 
 
 	def checkLastReceivedValue(self, storedItem, parameter):
-		if "lastReceivedValue" in storedItem.keys(): 
+		if "lastReceivedValue" in storedItem.keys():
 			parStyle = parameter.style
 
 			if parStyle in ["Float", "XY", "XYZ", "UV", "UVW", "WH", "RGB", "RGBA"]:
@@ -256,7 +262,7 @@ class Oscquery:
 				return True
 			else:
 				return storedItem["lastReceivedValue"] == parameter.eval()
-		else: 
+		else:
 			return False
 
 
@@ -271,7 +277,7 @@ class Oscquery:
 				return [parameter.tuplet[0].eval(), parameter.tuplet[1].eval()]
 			elif size == 3:
 				return [parameter.tuplet[0].eval(), parameter.tuplet[1].eval(), parameter.tuplet[2].eval()]
-			elif size == 4: 
+			elif size == 4:
 				return [parameter.tuplet[0].eval(), parameter.tuplet[1].eval(), parameter.tuplet[2].eval(), parameter.tuplet[3].eval()]
 
 		if (parameter.style in ["RGB", "RGBA"]):
@@ -285,10 +291,10 @@ class Oscquery:
 			curValue = parameter.val
 			menuLabels = parameter.menuLabels
 			menuNames = parameter.menuNames
-			
+
 			index = menuNames.index(curValue)
 			key = menuLabels[index]
-			
+
 			return [key]
 
 		if (parameter.style in ["CHOP", "COMP", "DAT", "SOP", "MAT", "TOP"]):
@@ -308,7 +314,7 @@ class Oscquery:
 				return [parameter.tuplet[0].eval(), parameter.tuplet[1].eval()]
 			elif size == 3:
 				return [parameter.tuplet[0].eval(), parameter.tuplet[1].eval(), parameter.tuplet[2].eval()]
-			elif size == 4: 
+			elif size == 4:
 				return [parameter.tuplet[0].eval(), parameter.tuplet[1].eval(), parameter.tuplet[2].eval(), parameter.tuplet[3].eval()]
 
 		if (parameter.style in ["RGB", "RGBA"]):
@@ -323,10 +329,10 @@ class Oscquery:
 			curValue = parameter.val
 			menuLabels = parameter.menuLabels
 			menuNames = parameter.menuNames
-			
+
 			index = menuNames.index(curValue)
 			key = menuLabels[index]
-			
+
 			return [key]
 
 		if (parameter.style in ["CHOP", "COMP", "DAT", "SOP", "MAT", "TOP"]):
@@ -335,7 +341,7 @@ class Oscquery:
 			return [parameter.eval()]
 
 	def floatToInt(self, f):
-		return int(f * 255) 
+		return int(f * 255)
 
 	def getHex(self, f):
 		v = hex(int(f * 255))[2:]
@@ -392,12 +398,12 @@ class Oscquery:
 			return 3	# read and write access
 		else:
 			return 1	# read-only access
-	
+
 
 	def getPrefix(self, container, i):
 		if not container:
 			return ""
-			
+
 		customPrefix = str(getattr(self.ownerComp.par, "Oscprefix" + str(i)))
 
 		if not customPrefix:
@@ -440,13 +446,13 @@ class Oscquery:
 
 	def ActivateBidirectional(self):
 		self.GetJson()
-	
+
 	def DeactivateBidirectional(self):
 		children = monitor_changes.findChildren(type=parameterexecuteDAT)
 
 		for c in children:
 			c.par.active = False
-	
+
 	def destroyBidirectional(self):
 		children = monitor_changes.findChildren(type=parameterexecuteDAT)
 
@@ -463,7 +469,7 @@ class Oscquery:
 		monitor_changes.unstore("/*")
 
 	def AddToListen(self, address, client):
-		try: 
+		try:
 			listeningClients = monitor_changes.fetch(address)
 
 			if client not in listeningClients:
@@ -480,7 +486,7 @@ class Oscquery:
 			monitor_changes.store(address, listeningClients)
 		except Exception:
 			pass
-	
+
 	def IsListeningToClient(self, address, client):
 		listeningClients = monitor_changes.fetch(address)
 		return client in listeningClients
